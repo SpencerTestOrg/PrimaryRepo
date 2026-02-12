@@ -1,0 +1,62 @@
+name: Approval Gate
+
+on: 
+  issue_comment:
+    types: [created]
+
+permissions:
+  content: read
+
+jobs:
+  approve-and-dispatch:
+  if: > 
+    github.event.issue.pull_request &&
+    contains(github.event.comment.body, '/ok-to-test')
+  runs-on: ubuntu-latest
+
+  steps:
+    - name: Check commenter permissions
+      uses: actions/github-script@v8
+      with:
+        script: |
+          const { data: permission } = await github.rest.repos.getCollaboratorPermissionLevel({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            username: context.actor
+          });
+
+          const allowed = ["admin", "write", "maintain"].includes(permission.permission);
+          if (!allowed) {
+            core.setFailed("User is not authorized to approve tests.");
+          }
+
+    - name: Get PR Head SHA
+      uses: actions/github-script@v8
+      with:
+        script: |
+          const pr = await github.rest.pulls.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.issue.number
+          });
+
+          core.setOutput("sha", pr.data.head.sha);
+          core.setOutput("repo", pr.data.head.repo.full_name);
+    
+    - name: Dispatch to Sandbox
+      uses: actions/github-script@v8
+      with:
+        github-token: ${{ secrets.SANDBOX_DISPATCH_TOKEN }}
+        script: |
+          await github.rest.repos.createDispatchEvent({
+            owner: "SpencerTestOrg",
+            repo: "HelperRepo",
+            event_type: "run-privileged-tests",
+            client_payload: {
+              source_repo: "${{ steps.pr.outputs.repo }}",
+              sha: "${{ steps.pr.outputs.sha }}",
+              pr_number: context.issue.number
+            }
+          });
+
+
