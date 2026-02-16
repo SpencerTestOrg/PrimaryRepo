@@ -9,10 +9,10 @@ permissions:
 
 jobs:
   approve-and-dispatch:
-  if: > 
-    github.event.issue.pull_request &&
-    contains(github.event.comment.body, '/ok-to-test')
-  runs-on: ubuntu-latest
+    if: > 
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/ok-to-test')
+    runs-on: ubuntu-latest
 
   steps:
     - name: Check commenter permissions
