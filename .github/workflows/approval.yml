@@ -5,7 +5,7 @@ on:
     types: [created]
 
 permissions:
-  content: read
+  contents: read
 
 jobs:
   approve-and-dispatch:
@@ -17,6 +17,7 @@ jobs:
   steps:
     - name: Check commenter permissions
       uses: actions/github-script@v8
+      id: pr
       with:
         script: |
           const { data: permission } = await github.rest.repos.getCollaboratorPermissionLevel({
