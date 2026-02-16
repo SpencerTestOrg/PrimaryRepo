@@ -51,7 +51,7 @@ jobs:
           await github.rest.repos.createDispatchEvent({
             owner: "SpencerTestOrg",
             repo: "HelperRepo",
-            event_type: "run-privileged-tests",
+            event_type: "run-privileged-workflow",
             client_payload: {
               source_repo: "${{ steps.pr.outputs.repo }}",
               sha: "${{ steps.pr.outputs.sha }}",
