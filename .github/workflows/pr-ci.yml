@@ -29,7 +29,7 @@ jobs:
               core.setFailed('PR requires approval comment: /ok-to-test');
             }
 
-    trigger-privileged-tests:
+  trigger-privileged-tests:
     needs: check-approval
     runs-on: ubuntu-latest
     steps:
@@ -48,5 +48,3 @@ jobs:
                 pr_number: context.issue.number
               }
             });check-and-print:
-    needs: check-approval
-    runs-on: ubuntu-latest
