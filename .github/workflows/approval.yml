@@ -19,6 +19,7 @@ jobs:
         uses: actions/github-script@v8
         id: pr
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const { data: permission } = await github.rest.repos.getCollaboratorPermissionLevel({
               owner: context.repo.owner,
@@ -35,6 +36,7 @@ jobs:
         uses: actions/github-script@v8
         id: pr-info
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const pr = await github.rest.pulls.get({
               owner: context.repo.owner,
