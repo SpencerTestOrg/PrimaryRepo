@@ -14,6 +14,7 @@ jobs:
       - name: Check for approval
         uses: actions/github-script@v8
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const comments = await github.rest.issues.listComments({
               owner: context.repo.owner,
@@ -47,4 +48,4 @@ jobs:
                 sha: context.payload.pull_request.head.sha,
                 pr_number: context.issue.number
               }
-            });check-and-print:
+            });
