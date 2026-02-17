@@ -29,23 +29,3 @@ jobs:
             if (!approved) {
               core.setFailed('PR requires approval comment: /ok-to-test');
             }
-
-  trigger-privileged-tests:
-    needs: check-approval
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger privileged workflow
-        uses: actions/github-script@v8
-        with:
-          github-token: ${{ secrets.PAT_TOKEN }}
-          script: |
-            await github.rest.repos.createDispatchEvent({
-              owner: 'spencerugbo',
-              repo: 'SandboxRepo',
-              event_type: 'run-privileged-workflow',
-              client_payload: {
-                source_repo: context.repo.full_name,
-                sha: context.payload.pull_request.head.sha,
-                pr_number: context.issue.number
-              }
-            });
