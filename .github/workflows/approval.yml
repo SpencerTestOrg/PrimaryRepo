@@ -33,7 +33,9 @@ jobs:
 
       - name: Get PR Head SHA
         uses: actions/github-script@v8
+        id: pr-info
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const pr = await github.rest.pulls.get({
               owner: context.repo.owner,
@@ -47,15 +49,15 @@ jobs:
       - name: Dispatch to Sandbox
         uses: actions/github-script@v8
         with:
-          github-token: ${{ secrets.SANDBOX_DISPATCH_TOKEN }}
+          github-token: ${{ secrets.PAT_TOKEN }}
           script: |
             await github.rest.repos.createDispatchEvent({
               owner: "SpencerTestOrg",
               repo: "HelperRepo",
               event_type: "run-privileged-workflow",
               client_payload: {
-                source_repo: "${{ steps.pr.outputs.repo }}",
-                sha: "${{ steps.pr.outputs.sha }}",
+                source_repo: "${{ steps.pr-info.outputs.repo }}",
+                sha: "${{ steps.pr-info.outputs.sha }}",
                 pr_number: context.issue.number
               }
             });
