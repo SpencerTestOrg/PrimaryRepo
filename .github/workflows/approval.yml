@@ -63,14 +63,30 @@ jobs:
               }
             });
             
-      - name: Dispatch to Sandbox (Cache)
+      - name: Get main branch SHA for cache
+        uses: actions/github-script@v8
+        id: main-sha
+        with:
+          script: |
+            const mainBranch = await github.rest.repos.getBranch({
+              owner: 'SpencerTestOrg',
+              repo: 'PrimaryRepo',
+              branch: 'main'
+            });
+            
+            const sha = mainBranch.data.commit.sha;
+            core.setOutput('sha', sha);
+            core.info(`Main branch SHA: ${sha}`);
+            return sha;
+      
+      - name: Dispatch nginx test with cache
         uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.PAT_TOKEN }}
           script: |
-            const mainSha = ${{ steps.main-sha.outputs.result }};
+            const mainSha = '${{ steps.main-sha.outputs.sha }}';
             const cacheKey = `nginx-image-${mainSha}`;
-
+      
             await github.rest.repos.createDispatchEvent({
               owner: 'SpencerTestOrg',
               repo: 'HelperRepo',
@@ -80,11 +96,11 @@ jobs:
                 pr_sha: '${{ steps.pr-info.outputs.sha }}',
                 pr_repo: '${{ steps.pr-info.outputs.repo }}',
                 main_sha: mainSha,
-                nginx_cache_key: cacheKey,  // ← Send cache key instead of image URL
+                nginx_cache_key: cacheKey,
                 base_ref: '${{ steps.pr-info.outputs.base_ref }}'
               }
             });
-
+      
             core.info('✅ Dispatched nginx test workflow');
             core.info(`Cache key: ${cacheKey}`);
             core.info(`Main SHA: ${mainSha}`);
