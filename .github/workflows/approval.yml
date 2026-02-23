@@ -62,5 +62,28 @@ jobs:
                 pr_number: context.issue.number
               }
             });
+            
+      - name: Dispatch to Sandbox (Cache)
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.PAT_TOKEN }}
+          script: |
+            const mainSha = await github.rest.repos.getBranch({
+              owner: 'SpencerTestOrg',
+              repo: 'PrimaryRepo',
+              branch: 'main'
+            });
+      
+            await github.rest.repos.createDispatchEvent({
+              owner: 'SpencerTestOrg',
+              repo: 'HelperRepo',
+              event_type: 'test-with-nginx',
+              client_payload: {
+                pr_number: context.payload.pull_request.number,
+                pr_sha: context.payload.pull_request.head.sha,
+                main_sha: mainSha.data.commit.sha,
+                nginx_image: `ghcr.io/spencertestorg/nginx-app:${mainSha.data.commit.sha}`
+              }
+            });
 
 
