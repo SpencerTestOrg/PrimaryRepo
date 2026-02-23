@@ -79,8 +79,8 @@ jobs:
               repo: 'HelperRepo',
               event_type: 'test-with-nginx',
               client_payload: {
-                pr_number: context.payload.pull_request.number,
-                pr_sha: context.payload.pull_request.head.sha,
+                pr_number: context.issue.number,
+                pr_sha: '${{ steps.pr-info.outputs.sha }}',
                 main_sha: mainSha.data.commit.sha,
                 nginx_image: `ghcr.io/spencertestorg/nginx-app:${mainSha.data.commit.sha}`
               }
