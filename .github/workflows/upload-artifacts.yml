@@ -1,4 +1,4 @@
-name: Build and Cache Nginx
+name: Build and Upload Nginx
 on:
   push:
     branches: [main]
@@ -8,9 +8,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    
+
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/checkout@v4
 
       - name: Create test page
         run: |
@@ -39,24 +39,21 @@ jobs:
       - name: Build Docker image
         run: |
           docker build -t nginx-app:${{ github.sha }} .
-          docker images nginx-app:${{ github.sha }}
 
-      - name: Save Docker image to tarball
+      - name: Save Docker image
         run: |
-          mkdir -p /tmp/docker-cache
-          docker save nginx-app:${{ github.sha }} | gzip > /tmp/docker-cache/nginx-${{ github.sha }}.tar.gz
-          # Show size
-          ls -lh /tmp/docker-cache/
-          echo "Compressed size: $(du -h /tmp/docker-cache/nginx-${{ github.sha }}.tar.gz | cut -f1)"
+          mkdir -p /tmp/nginx-artifact
+          docker save nginx-app:${{ github.sha }} | gzip > /tmp/nginx-artifact/nginx-image.tar.gz
+          echo "Compressed size: $(du -h /tmp/nginx-artifact/nginx-image.tar.gz | cut -f1)"
 
-      - name: Cache Docker image
-        uses: actions/cache/save@v4
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
-          path: /tmp/docker-cache/nginx-${{ github.sha }}.tar.gz
-          key: nginx-image-${{ github.sha }}
+          name: nginx-image-${{ github.sha }}
+          path: /tmp/nginx-artifact/nginx-image.tar.gz
+          retention-days: 7
 
-      - name: Output cache info
+      - name: Output artifact info
         run: |
-          echo "✅ Image cached successfully"
-          echo "Cache key: nginx-image-${{ github.sha }}"
-          echo "Image tag: nginx-app:${{ github.sha }}"
+          echo "✅ Artifact uploaded"
+          echo "Artifact name: nginx-image-${{ github.sha }}"
