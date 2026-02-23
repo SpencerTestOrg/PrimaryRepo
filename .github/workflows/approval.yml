@@ -68,12 +68,9 @@ jobs:
         with:
           github-token: ${{ secrets.PAT_TOKEN }}
           script: |
-            const mainSha = await github.rest.repos.getBranch({
-              owner: 'SpencerTestOrg',
-              repo: 'PrimaryRepo',
-              branch: 'main'
-            });
-      
+            const mainSha = ${{ steps.main-sha.outputs.result }};
+            const cacheKey = `nginx-image-${mainSha}`;
+
             await github.rest.repos.createDispatchEvent({
               owner: 'SpencerTestOrg',
               repo: 'HelperRepo',
@@ -81,9 +78,15 @@ jobs:
               client_payload: {
                 pr_number: context.issue.number,
                 pr_sha: '${{ steps.pr-info.outputs.sha }}',
-                main_sha: mainSha.data.commit.sha,
-                nginx_image: `ghcr.io/spencertestorg/nginx-app:${mainSha.data.commit.sha}`
+                pr_repo: '${{ steps.pr-info.outputs.repo }}',
+                main_sha: mainSha,
+                nginx_cache_key: cacheKey,  // ← Send cache key instead of image URL
+                base_ref: '${{ steps.pr-info.outputs.base_ref }}'
               }
             });
+
+            core.info('✅ Dispatched nginx test workflow');
+            core.info(`Cache key: ${cacheKey}`);
+            core.info(`Main SHA: ${mainSha}`);
 
 
