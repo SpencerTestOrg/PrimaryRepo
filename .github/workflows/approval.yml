@@ -46,6 +46,7 @@ jobs:
 
             core.setOutput("sha", pr.data.head.sha);
             core.setOutput("repo", pr.data.head.repo.full_name);
+            core.setOutput("base_ref", pr.data.base.ref);
       
       - name: Dispatch to Sandbox
         uses: actions/github-script@v8
@@ -79,14 +80,41 @@ jobs:
             core.info(`Main branch SHA: ${sha}`);
             return sha;
       
-      - name: Dispatch nginx test with cache
+      - name: Find build workflow run
+        uses: actions/github-script@v8
+        id: find-run
+        with:
+          github-token: ${{ secrets.PAT_TOKEN }}
+          script: |
+            const mainSha = '${{ steps.main-sha.outputs.sha }}';
+
+            const runs = await github.rest.actions.listWorkflowRunsForRepo({
+              owner: 'SpencerTestOrg',
+              repo: 'PrimaryRepo',
+              event: 'push',
+              status: 'success',
+              branch: 'main',
+              per_page: 20
+            });
+
+            const matchingRun = runs.data.workflow_runs.find(run => run.head_sha === mainSha);
+
+            if (!matchingRun) {
+              core.setFailed(`No successful build found for SHA: ${mainSha}`);
+              return;
+            }
+
+            core.setOutput('run_id', matchingRun.id.toString());
+            core.info(`Found workflow run: ${matchingRun.id}`);
+            return matchingRun.id;
+
+      - name: Dispatch nginx test
         uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.PAT_TOKEN }}
           script: |
             const mainSha = '${{ steps.main-sha.outputs.sha }}';
-            const cacheKey = `nginx-image-${mainSha}`;
-      
+
             await github.rest.repos.createDispatchEvent({
               owner: 'SpencerTestOrg',
               repo: 'HelperRepo',
@@ -96,13 +124,12 @@ jobs:
                 pr_sha: '${{ steps.pr-info.outputs.sha }}',
                 pr_repo: '${{ steps.pr-info.outputs.repo }}',
                 main_sha: mainSha,
-                nginx_cache_key: cacheKey,
+                artifact_name: `nginx-image-${mainSha}`,
+                workflow_run_id: '${{ steps.find-run.outputs.run_id }}',
+                source_repo: 'SpencerTestOrg/PrimaryRepo',
                 base_ref: '${{ steps.pr-info.outputs.base_ref }}'
               }
             });
-      
-            core.info('✅ Dispatched nginx test workflow');
-            core.info(`Cache key: ${cacheKey}`);
-            core.info(`Main SHA: ${mainSha}`);
 
+            core.info('✅ Dispatched nginx test');
 
