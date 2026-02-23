@@ -1,4 +1,4 @@
-name: Build Nginx Container
+name: Build and Cache Nginx
 on:
   push:
     branches: [main]
@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
+    
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
@@ -27,7 +27,7 @@ jobs:
           </html>
           EOF
 
-      - name: Create simple Dockerfile
+      - name: Create Dockerfile
         run: |
           cat > Dockerfile <<EOF
           FROM nginx:alpine
@@ -36,19 +36,27 @@ jobs:
           CMD ["nginx", "-g", "daemon off;"]
           EOF
 
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build Docker image
+        run: |
+          docker build -t nginx-app:${{ github.sha }} .
+          docker images nginx-app:${{ github.sha }}
 
-      - name: Build and push
-        uses: docker/build-push-action@v5
+      - name: Save Docker image to tarball
+        run: |
+          mkdir -p /tmp/docker-cache
+          docker save nginx-app:${{ github.sha }} | gzip > /tmp/docker-cache/nginx-${{ github.sha }}.tar.gz
+          # Show size
+          ls -lh /tmp/docker-cache/
+          echo "Compressed size: $(du -h /tmp/docker-cache/nginx-${{ github.sha }}.tar.gz | cut -f1)"
+
+      - name: Cache Docker image
+        uses: actions/cache/save@v4
         with:
-          context: .
-          push: true
-          tags: |
-            ghcr.io/spencertestorg/nginx-app:latest
-            ghcr.io/spencertestorg/nginx-app:${{ github.sha }}
-  
+          path: /tmp/docker-cache/nginx-${{ github.sha }}.tar.gz
+          key: nginx-image-${{ github.sha }}
+
+      - name: Output cache info
+        run: |
+          echo "✅ Image cached successfully"
+          echo "Cache key: nginx-image-${{ github.sha }}"
+          echo "Image tag: nginx-app:${{ github.sha }}"
