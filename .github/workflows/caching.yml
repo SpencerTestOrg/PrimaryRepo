@@ -1,0 +1,54 @@
+name: Build Nginx Container
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-nginx:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Create test page
+        run: |
+          mkdir -p dist
+          cat > dist/index.html <<EOF
+          <!DOCTYPE html>
+          <html>
+          <head><title>Nginx Test</title></head>
+          <body>
+            <h1>Nginx Container Test</h1>
+            <p>Built from SHA: ${{ github.sha }}</p>
+            <p>Built at: $(date)</p>
+          </body>
+          </html>
+          EOF
+
+      - name: Create simple Dockerfile
+        run: |
+          cat > Dockerfile <<EOF
+          FROM nginx:alpine
+          COPY dist/index.html /usr/share/nginx/html/index.html
+          EXPOSE 80
+          CMD ["nginx", "-g", "daemon off;"]
+          EOF
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/spencertestorg/nginx-app:latest
+            ghcr.io/spencertestorg/nginx-app:${{ github.sha }}
+  
